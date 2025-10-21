@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-data
+  labels:
+    app: weather-data
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: weather-data
+  template:
+    metadata:
+      labels:
+        app: weather-data
+    spec:
+      containers:
+      - name: weather-data
+        image: weatherappacr.azurecr.io/weather-data-service:latest
+        ports:
+        - containerPort: 5001
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: database-url
+        - name: OPENWEATHERMAP_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: openweathermap-api-key
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "512Mi"
+          requests:
+            cpu: "0.2"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: weather-data-service
+spec:
+  selector:
+    app: weather-data
+  ports:
+  - port: 5001
+    targetPort: 5001
+  type: ClusterIP

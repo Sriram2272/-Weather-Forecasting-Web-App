@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forecast-analytics
+  labels:
+    app: forecast-analytics
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: forecast-analytics
+  template:
+    metadata:
+      labels:
+        app: forecast-analytics
+    spec:
+      containers:
+      - name: forecast-analytics
+        image: weatherappacr.azurecr.io/forecast-analytics-service:latest
+        ports:
+        - containerPort: 5002
+        env:
+        - name: WEATHER_SERVICE_URL
+          value: "http://weather-data-service:5001"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "512Mi"
+          requests:
+            cpu: "0.2"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: forecast-analytics-service
+spec:
+  selector:
+    app: forecast-analytics
+  ports:
+  - port: 5002
+    targetPort: 5002
+  type: ClusterIP
